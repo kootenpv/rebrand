@@ -6,6 +6,20 @@ Helps by renaming directories, filenames and file contents in a case-preserving 
 
 ![rebrand demo](/resources/demo.gif)
 
+## How does it work
+
+Imagine we want to rename a library called `SomeThing` to `AnotherName`.
+
+It will first normalize `"SomeThing`" to `["some", "thing"]` and `"AnotherName`" to `["another", "name"]`, and build patterns on this.
+
+Then, when matching and replacing, it will memorize the casing pattern and separator on e.g. `"Some-thing"` to replace it with the same convention, like so: `Another-name`.
+
+This works for:
+
+- filenames
+- directories
+- file contents
+
 ## Installation
 
     pip install rebrand
@@ -18,5 +32,5 @@ Helps by renaming directories, filenames and file contents in a case-preserving 
 ## TODO:
 
 - Implement faster matching
-- More options (such as disabling image warnings, verbose)
+- More options (such as disabling image warnings, verbosity, ignore patterns)
 - Switch from `fire` back to `argparse`

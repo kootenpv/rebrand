@@ -2,7 +2,7 @@ import sys
 from rebrand.rebrand import get_scanner, run, replace
 
 __project__ = "rebrand"
-__version__ = "0.0.0"
+__version__ = "0.0.1"
 __repo__ = "https://github.com/kootenpv/rebrand"
 
 
