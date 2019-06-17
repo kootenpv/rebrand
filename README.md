@@ -33,6 +33,6 @@ Binaries are just copied, and warnings are currently shown for png and jpg files
 
 ## TODO:
 
-- ~~ Implement radically faster matching ~~
+- ~~Implement radically faster matching~~
 - More options (such as disabling image warnings, verbosity, ignore patterns)
-- ~~ Switch from `fire` back to `argparse` ~~
+- ~~Switch from `fire` back to `argparse`~~
