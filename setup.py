@@ -9,8 +9,6 @@ MINOR_VERSION = "0"
 MICRO_VERSION = "1"
 VERSION = "{}.{}.{}".format(MAJOR_VERSION, MINOR_VERSION, MICRO_VERSION)
 
-install_requires = []
-
 setup(
     name="rebrand",
     version=VERSION,
@@ -21,7 +19,8 @@ setup(
     author="Pascal van Kooten",
     author_email="kootenpv@gmail.com",
     license="MIT",
-    entry_points={"console_scripts": ["rebrand = rebrand.__main__:_main"]},
+    install_requires=["textsearch"],
+    entry_points={"console_scripts": ["rebrand = rebrand.__main__:main"]},
     classifiers=[
         "Environment :: Console",
         "Intended Audience :: Developers",

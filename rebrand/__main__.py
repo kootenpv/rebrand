@@ -1,7 +1,17 @@
 from rebrand import run, version
 
 
-def _main():
-    import fire as _fire
+def main():
+    import argparse
 
-    _fire.Fire()
+    p = argparse.ArgumentParser(description="welcome")
+    p.add_argument("oldname")
+    p.add_argument("newname")
+    p.add_argument("sourcedir")
+    p.add_argument('destination', default=None)
+    args = p.parse_args()
+    run(args.oldname, args.newname, args.sourcedir, args.destination)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,3 +1,4 @@
+import os
 from colorama import Fore
 from collections import defaultdict
 import os
@@ -6,15 +7,15 @@ import re
 import shutil
 from pathlib import Path
 from pprint import pprint
+from textsearch import TextSearch
 
-LOWERCASE = set(string.ascii_lowercase)
-UPPERCASE = set(string.ascii_uppercase)
+BOUNDS = set(string.digits + string.ascii_letters)
 
 BLOCKED = set(["node_modules", ".git", "__pycache__"])
 
 
-def handle_file(scanner, file_path, data):
-    new_path = replace(scanner, file_path)
+def handle_file(r, file_path, data):
+    new_path = r.replace(file_path)
     if file_path != new_path:
         data["files_moved"].append((file_path, new_path))
     try:
@@ -27,19 +28,19 @@ def handle_file(scanner, file_path, data):
         # print("[E] Unable to do anything with binary file", new_path)
         shutil.move(file_path, new_path)
         return
-    new_txt = replace(scanner, txt)
+    new_txt = r.replace(txt)
     if txt != new_txt:
         data["files_content_change"].append(new_path)
         with open(new_path, "w", encoding="utf8") as f:
             f.write(new_txt)
 
 
-def recurse_path(top, scanner, data=None):
+def recurse_path(top, r, data=None):
     if data is None:
         data = defaultdict(list)
     if os.path.isdir(top):
         data["directories_visited"].append(top)
-        new_path = replace(scanner, top)
+        new_path = r.replace(top)
         if top != new_path:
             data["directories_moved"].append((top, new_path))
             shutil.move(top, new_path)
@@ -54,11 +55,11 @@ def recurse_path(top, scanner, data=None):
             if child_name in BLOCKED:
                 # shutil.move(top, new_path)
                 continue
-            recurse_path(child_path, scanner, data)
+            recurse_path(child_path, r, data)
         return data, top
     elif os.path.isfile(top):
         data["files_visited"].append(top)
-        handle_file(scanner, top, data)
+        handle_file(r, top, data)
     else:
         print("ERR", top)
     return data, top
@@ -107,95 +108,53 @@ def normalize(name):
 
 
 casing = [uppercase, titlecase, halftitlecase, lowercase]
-joiners = ["", "-", "_", " ", "__", "\."]
+joiners = ["", "\-", "_", " ", "__", "\."]
 special_case = [pascalcase, camelcase]
 
 
-class Rule:
-    def __init__(self, pre, x, y, post, case, sep, esc, verbose):
-        self.verbose = verbose
-        self.esc = esc
-        self.pre = pre
-        self.post = post
-        self.y = y
-        self.case = case
-        self.sep = sep
-        self.verbose = verbose
-        self.escape = re.escape if esc else lambda x: x
-        fn = self.transform if verbose else self.constant()
-        self.scan_tuple = (self.regex(x), fn)
+def ts_replacer(a, b):
+    # lowercase letters before are allowed, how about a second one...
+    # ts = TextSearch("sensitive", "norm", ALPHANUM - ALPHA_LOWER, ALPHANUM)
+    ts = TextSearch("sensitive", "norm", BOUNDS, BOUNDS)
 
-    def constant(self):
-        return self.transform("", "")
+    found_sep_in_b = ""
+    for x in [" ", "-", "_", "."]:
+        if x in b:
+            found_sep_in_b = x
+            break
 
-    def regex(self, x):
-        regex = self.pre + self.escape(self.case(x, self.sep)) + self.post
-        return regex
+    # a = ["some", "thing"]
+    # b = ["another", "thing"]
 
-    @property
-    def name(self):
-        return self.pre + "|" + self.case.__name__ + "|" + self.post + "|" + self.sep
+    aa = normalize(a)
+    bb = normalize(b)
 
-    def __repr__(self):
-        return "Rule: " + self.name
+    # questions like:
+    # - prefer camelCase for word2 when word1 is lowercase
+    # - prefer Halftitle, PascalCase/Titlecase for word2 when word1 is titlecase
+    # etc
+    # below... lower order means higher prio
+    for s in [".", "_", "-", found_sep_in_b, ""]:
+        # halftitle
+        x = aa[0][0].title() + s.join(aa)[1:]
+        y = bb[0][0].title() + s.join(bb)[1:]
+        ts.add(x, y)
 
-    def transform(self, scanner, x):
-        # scanner and x unused indeed
-        if self.verbose:
-            print(self.name)
-        if self.pre == "\\.":
-            pre = "."
-        elif self.pre in joiners:
-            pre = self.pre
-        else:
-            pre = ""
-        if self.post == "\.":
-            post = "."
-        elif self.post in joiners:
-            post = self.post
-        else:
-            post = ""
-        if self.sep == "\.":
-            sep = "."
-        elif self.sep in joiners:
-            sep = self.sep
-        else:
-            sep = ""
-        return pre + self.escape(self.case(self.y, sep)) + post
+        # camelCase
+        x = s.join([aa[0].lower()] + [x.title() for x in aa[1:]])
+        y = s.join([bb[0].lower()] + [x.title() for x in bb[1:]])
+        ts.add(x, y)
 
+        # easy cases
+        for c in [str.upper, str.title, str.lower]:
+            x = s.join([c(x) for x in aa])
+            y = s.join([c(x) for x in bb])
+            ts.add(x, y)
 
-def get_scanner(a, b, escape, verbose):
-    X = normalize(a)
-    Y = normalize(b)
-    rules = []
+    # ts.add("SomeThing", "AnotherThing")
+    ts.add(a, b)
 
-    # letters before are okay, after not
-    r = Rule("(?<![^a-zA-Z0-9 ])", X, Y, "(?![a-z])", pascalcase, "", escape, verbose)
-    rules.append(r)
-    # letters before are not okay, after okay
-    r = Rule("(?<![a-z])", X, Y, "(?<![^a-zA-Z0-9 ])", camelcase, "", escape, verbose)
-    rules.append(r)
-
-    # first pre, then post, then neither
-    for pre_, post_ in [(True, False), (False, True), (False, False)]:
-        for case in casing:
-            for sep in joiners:
-                pre = sep if pre_ else "\\b"
-                post = sep if post_ else "\\b"
-
-                rule = Rule(pre, X, Y, post, case, sep, escape, verbose)
-                rules.append(rule)
-
-    # return rules
-    scans = [x.scan_tuple for x in rules]
-    scans.append((".", lambda scanner, x: x))
-    scanner = re.Scanner(scans, flags=re.DOTALL)
-    return scanner
-
-
-def replace(scanner, c):
-    match, _ = scanner.scan(c)
-    return "".join(match)
+    return ts
 
 
 def colorize(old, new):
@@ -246,17 +205,19 @@ def print_results(data, new_top):
                 print(x)
 
 
-def run(old_name, new_name, toplevel_path, escape=True, verbose=False):
-    # 0. backup
-    if not os.path.isdir(toplevel_path):
-        raise ValueError("should give a path")
+def run(old_name, new_name, toplevel_path, destination=None, escape=True, verbose=False):
+    ts = ts_replacer(old_name, new_name)
     toplevel_path = os.path.abspath(toplevel_path)
-    backup_path = toplevel_path + "_rebranded"
-    if os.path.isdir(backup_path):
-        shutil.rmtree(backup_path)
-    shutil.copytree(toplevel_path, backup_path)
-    # 1. replacement
-    scanner = get_scanner(old_name, new_name, escape=escape, verbose=verbose)
-    data, new_top = recurse_path(backup_path, scanner)
+    if not os.path.isdir(toplevel_path):
+        raise ValueError("Should give a valid path to search")
+    if destination is None:
+        destination = ts.replace(toplevel_path)
+    if os.path.exists(destination):
+        raise ValueError("Destination '{}' already exists".format(destination))
+    # when taking the gloves off
+    # if os.path.isdir(backup_path):
+    #    shutil.rmtree(backup_path)
+    shutil.copytree(toplevel_path, destination)
+    data, new_top = recurse_path(destination, ts)
     data = dict(data)
     print_results(data, new_top)

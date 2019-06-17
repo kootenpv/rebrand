@@ -1,5 +1,5 @@
 import sys
-from rebrand.rebrand import get_scanner, run, replace
+from rebrand.rebrand import run, ts_replacer
 
 __project__ = "rebrand"
 __version__ = "0.0.1"
