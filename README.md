@@ -28,11 +28,11 @@ Binaries are just copied, and warnings are currently shown for png and jpg files
 
 ## Usage
 
-    rebrand run <OLD> <NEW> <LOCATION>
-    # e.g. rebrand run ancient modern .
+    rebrand <OLD> <NEW> <LOCATION> (optional: <DESTINATION>)
+    # e.g. rebrand ancient modern .
 
 ## TODO:
 
-- Implement radically faster matching
+- ~~ Implement radically faster matching ~~
 - More options (such as disabling image warnings, verbosity, ignore patterns)
 - Switch from `fire` back to `argparse`
