@@ -2,7 +2,7 @@ import sys
 from rebrand.rebrand import run, ts_replacer
 
 __project__ = "rebrand"
-__version__ = "0.0.6"
+__version__ = "0.0.12"
 __repo__ = "https://github.com/kootenpv/rebrand"
 
 
