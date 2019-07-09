@@ -173,11 +173,17 @@ def colorize(old, new):
 
 def print_results(data, new_top):
     any_change = False
-    for x in ['directories_moved', 'files_moved', 'binary_files_moved', "files_content_change"]:
+    for x in [
+        "resulting_folder",
+        'directories_moved',
+        'files_moved',
+        'binary_files_moved',
+        "files_content_change",
+    ]:
         if x in data:
             any_change = True
             print(Fore.YELLOW + x.upper() + Fore.RESET)
-            if "moved" in x:
+            if "moved" in x or x == "resulting_folder":
                 for old, new in data[x]:
                     print(colorize(old, new))
                 print()
@@ -219,5 +225,6 @@ def run(old_name, new_name, toplevel_path, destination=None, escape=True, verbos
     #    shutil.rmtree(backup_path)
     shutil.copytree(toplevel_path, destination)
     data, new_top = recurse_path(destination, ts)
+    data["resulting_folder"] = [(toplevel_path, destination)]
     data = dict(data)
     print_results(data, new_top)

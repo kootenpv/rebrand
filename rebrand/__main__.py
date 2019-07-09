@@ -8,7 +8,7 @@ def main():
     p.add_argument("oldname")
     p.add_argument("newname")
     p.add_argument("sourcedir")
-    p.add_argument('destination', default=None)
+    p.add_argument('destination', nargs='?', default=None)
     args = p.parse_args()
     run(args.oldname, args.newname, args.sourcedir, args.destination)
 
